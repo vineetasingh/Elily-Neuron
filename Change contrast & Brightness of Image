@@ -1,0 +1,76 @@
+//-------------Program for changing contrast and brightness of an image using trackbars---------------------------------------
+
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <string>
+#include<conio.h>
+#include <opencv/cv.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include <fstream>
+#include "opencv2/imgproc/imgproc.hpp"
+#include <iostream>
+
+
+
+using namespace cv;
+using namespace std;
+ofstream myfile;
+
+using namespace cv;
+int globalpha=10;// global variable for alpha
+int globbeta=0;// global variable for beta
+
+void changeimg(int alpha, int beta)
+{
+
+	/// Do the operation new_image(i,j) = alpha*image(i,j) + beta
+	Mat image = imread("Vin_1.jpg");
+	Mat new_image = Mat::zeros(image.size(), image.type());
+
+
+	for (int y = 0; y < image.rows; y++)
+	{
+		for (int x = 0; x < image.cols; x++)
+		{
+			for (int c = 0; c < 3; c++)
+			{
+				new_image.at<Vec3b>(y, x)[c] =
+					saturate_cast<uchar>(alpha*(image.at<Vec3b>(y, x)[c]) + beta);
+			}
+		}
+	}
+	/// Show stuff
+	//imshow("Original Image", image);
+	imshow("New Image", new_image);
+}
+void on_trackbar1(int alpha, void*)
+{
+	globalpha = alpha/10;
+	changeimg(globalpha, globbeta);
+}
+void on_trackbar2(int beta, void*)
+{
+	globbeta = beta;
+	changeimg(globalpha, globbeta);
+}
+
+
+int main(int argc, char** argv)
+{
+	
+	int alpha; /**< Simple contrast control */
+	int beta;  /**< Simple brightness control */
+	/// Create Windows
+	namedWindow("Original Image", 1);
+	namedWindow("New Image", 1);
+	createTrackbar("alpha (contrast)", "New Image", &alpha, 30, on_trackbar1);// ranging from 1.0 to 3.0
+	on_trackbar1(alpha, 0);
+	createTrackbar("beta (brightness)", "New Image", &beta, 100, on_trackbar2);// ranging from 0 to 100
+	on_trackbar2(beta, 0);
+
+	/// Wait until user press some key
+	waitKey();
+	return 0;
+}
