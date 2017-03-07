@@ -16,9 +16,13 @@
 #include "opencv2/opencv.hpp "
 
 
-
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
 using namespace cv;
 using namespace std;
+const int somathreshold = 2000;
+const int bluecontourthreshold = 1000;
+RNG rng;
+
 
 Mat mip(vector<Mat> input, int channel)
 {
@@ -80,84 +84,8 @@ cv::addWeighted(new_image, 2.0, blurr, -1.0, 0, new_image);
 	return new_image;
 }
 
-/*
-int main()
-{
-	vector<Mat> zimages; Mat x, resultb, resultg, resultr;
-	vector<Mat> stackimr; vector<Mat> stackimg; vector<Mat> stackimb;
-	stackimr.clear();
-	stackimg.clear();
-	stackimb.clear();
-	for (int z = 1; z <= 9; z++)
-	{
-		string imagepath = format("C:\\CCHMC\\NGN2\\Old STEP1\\183S-3p9 TC1253a\\z%d_3layers_original.tif", z);
-		string store = format("%d.tif", z);
-
-		x = imread(imagepath);
-		Mat bgr[3];   //destination array
-		split(x, bgr);//split source  
-
-		//Note: OpenCV uses BGR color order
-		imwrite("blue.png", bgr[0]); //blue channel
-		imwrite("green.png", bgr[1]); //green channel
-		imwrite("red.png", bgr[2]); //red channel
-
-		Mat result_blue(bgr[0].rows, bgr[0].cols, CV_8UC3); // notice the 3 channels here!
-		Mat result_green(bgr[1].rows, bgr[1].cols, CV_8UC3); // notice the 3 channels here!
-		Mat result_red(bgr[2].rows, bgr[2].cols, CV_8UC3); // notice the 3 channels here!
-		Mat empty_image = Mat::zeros(bgr[0].rows, bgr[0].cols, CV_8UC1);
-
-		Mat in1[] = { bgr[0], empty_image, empty_image };
-		int from_to1[] = { 0, 0, 1, 1, 2, 2 };
-		mixChannels(in1, 3, &result_blue, 1, from_to1, 3);
-		stackimb.push_back(result_blue);
-		
-		
-		Mat in2[] = { empty_image, bgr[1], empty_image };
-		int from_to2[] = { 0, 0, 1, 1, 2, 2 };
-		mixChannels(in2, 3, &result_green, 1, from_to2, 3);
-		stackimg.push_back(result_green);
-		
-		
-		Mat in3[] = { empty_image, empty_image, bgr[2]};
-		int from_to3[] = { 0, 0, 1, 1, 2, 2 };
-		mixChannels(in3, 3, &result_red, 1, from_to3, 3);
-		imwrite("resultred.tif", result_red);
-		stackimr.push_back(result_red);
-
-		}
-
-	
-	resultb = mip(stackimb, 0);
-	resultg = mip(stackimg, 1);
-	resultr = mip(stackimr, 2);
-	Mat resultrn = changeimg(resultr, 25, 5);
-	Mat resultgn = changeimg(resultg, 10, 5);
-//	imshow(" mip",result);
-	imwrite("zmipb.tif", resultb);
-	imwrite("zmipg.tif", resultg);
-	imwrite("zmipr.tif", resultr);
-	imwrite("zmipgn.tif", resultgn);
-	imwrite("zmiprn.tif", resultrn);
-
-	waitKey(0);
-	return 0;
 
 
-
-}
-
-
-*/
-
-#include "opencv2/opencv.hpp"
-#include <fstream>
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-using namespace cv;
-using namespace std;
-const int somathreshold = 2000;
-const int bluecontourthreshold = 1000;
-RNG rng;
 void arounddendrite(vector<RotatedRect> rotRect, ofstream &myfile, int CountLW, int CountMW, int CountHW)
 {// average count of low, med and high int synapses aroung LMH width dendrites
 	Mat thr_high_Synapse=imread("z_highsynapse.tif");
@@ -224,125 +152,6 @@ void arounddendrite(vector<RotatedRect> rotRect, ofstream &myfile, int CountLW, 
 	//myfile << "," << "arounddendrite" << "," << "Total number of low intensity synapse" <<"," << "Total number of med intensity synapses" << "," << "Total number of high intensity synapses" <<","<< "Avg Low Int Syn count arnd. Low width" << "," << "Avg Med Int Syn count arnd. Low width" << "," << "Avg Low Int Syn count arnd. High width" << "," << "Avg Low Int Syn count arnd. Med width" << "," << " Avg Med Int Syn count arnd. Med width" << "," << "Avg High Int Syn count arnd. Med width" << "," << "Avg Low Int Syn count arnd. Large width " << "," << "Avg Med Int Syn count arnd. Large width" << "," << "Avg High Int Syn count arnd. Large width";
 	myfile << "," << "arounddendrite" << "," <<totlowIntSyn<<","<<totmedIntSyn<<","<< tothigIntSyn <<","<<avgLWlcount << "," << avgLWmcount << "," << avgLWhcount << "," << avgMWlcount << "," << avgMWmcount << "," << avgMWhcount << "," << avgHWlcount << "," << avgHWmcount << "," << avgHWhcount;
 }
-/*void dendritedetect(Mat img, ofstream & myfile, string fstr)
-{
-	//string dendrpath = format("C:\\Users\\VIneeta\\Documents\\Visual Studio 2013\\Projects\\OpenCV-Test\\OpenCV-Test\\Old STEP1\\%s\\den_z%d_3layers_processed.png", fstr.c_str(), n);
-	string dendrpath = format("C:\\CCHMC\\NGN2\\Old STEP1i\\%s\\den_%s_1+2+3_processed.jpg", fstr.c_str(), fstr.c_str());
-	Mat imgtofun = img.clone();
-	vector<vector<Point>> checkcontours;
-	vector<Vec4i> checkhierarchy;
-	Mat immg = img.clone();
-	//cout << dendrpath << endl;
-	cv::normalize(img, img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-	Mat cloned = img.clone();
-	Mat hthr;
-	//cv::inRange(img, cv::Scalar(0, 17, 2), cv::Scalar(60, 255, 150), img);//Green-yellow THRESH
-	cv::inRange(img, cv::Scalar(20, 0, 20), cv::Scalar(255, 100, 225), img);//HIGH PURPLE THRESH
-	int Swid = 0, Mwid = 0, Lwid = 0, totSwid = 0, totMwid = 0, totLwid = 0, avgSwid = 0, avgMwid = 0, avgLwid = 0, avgSlen = 0, avgMlen = 0, avgLlen = 0;
-	int totSlen = 0, totMlen = 0, totLlen = 0;
-	Mat thresh = img.clone(); // original thresholded image of greeen dendrites
-	int avgoverallwdth = 0, avgoverallen = 0;
-	cv::Mat skel(img.size(), CV_8UC1, cv::Scalar(0));
-	cv::Mat temp(img.size(), CV_8UC1);
-	cv::Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
-	bool done;
-	do
-	{
-		cv::morphologyEx(img, temp, cv::MORPH_OPEN, element);
-		cv::bitwise_not(temp, temp);
-		cv::bitwise_and(img, temp, temp);
-		// cout << "img size  " << img.size() << endl << "temp.size  " << temp.size() << endl << " skel size  " << skel.size() << endl;
-		cv::bitwise_or(skel, temp, skel);
-		cv::erode(img, img, element);
-		double max;
-		cv::minMaxLoc(img, 0, &max);
-		done = (max == 0);
-	} while (!done);
-	Mat cdst;
-	cvtColor(skel, cdst, CV_GRAY2BGR);
-	// imwrite("skeleton.png",skel);
-	dilate(skel, skel, Mat());
-	// imwrite the image -------------------------------------------------------------------- Display purposes only
-	vector<vector<Point>> dispcontours; vector<Vec4i> disphierarchy;
-	findContours(skel, dispcontours, disphierarchy, CV_RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-	for (int i = 0; i < dispcontours.size(); i++)
-	{
-		if (arcLength(dispcontours[i], false)>250)
-			drawContours(cloned, dispcontours, i, Scalar(128, 0, 255), 1, cv::LINE_8, vector<Vec4i>(), 0, Point());
-	}
-	imwrite(dendrpath, cloned);
-	vector<vector<Point>> hcontours;
-	vector<Vec4i> hhierarchy;
-	dilate(skel, skel, Mat());
-	findContours(skel, hcontours, hhierarchy, CV_RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-	vector<RotatedRect> minRect(hcontours.size());
-	int wdth = 0, swidth = 0, mwidth = 0, lwidth = 0;
-	int slen = 0, mlen = 0, llen = 0;
-	for (int i = 0; i < hcontours.size(); i++)
-	{
-		minRect[i] = minAreaRect(Mat(hcontours[i]));
-	}
-	for (int i = 0; i< hcontours.size(); i++)
-	{
-		if ((arcLength(hcontours[i], true) >= 250) && (hcontours[i].size() >= 5))
-		{
-			Size2f s = minRect[i].size;
-			wdth = MIN(s.width, s.height);
-			if (wdth >= 1)
-			{
-				if (wdth <= 50)
-				{
-					totSwid += wdth;
-					swidth++;
-				}
-				else if (wdth > 50 && wdth <= 100)
-				{
-					totMwid += wdth;
-					mwidth++;
-				}
-				else
-				{
-					totLwid += wdth;
-					lwidth++;
-				}
-			}
-			if ((arcLength(hcontours[i], true)) <= 350)
-			{
-				totSlen += (arcLength(hcontours[i], true));
-				slen++;
-			}
-			else if ((arcLength(hcontours[i], true) >= 350) && (arcLength(hcontours[i], true) <= 600))
-			{
-				totMlen += (arcLength(hcontours[i], true));
-				mlen++;
-			}
-			else
-			{
-				totLlen += (arcLength(hcontours[i], true));
-				llen++;
-			}
-		}
-	}
-	if (slen == 0) avgSlen = 0;
-	else avgSlen = totSlen / slen;
-	if (mlen == 0) avgMlen = 0;
-	else avgMlen = totMlen / mlen;
-	if (llen == 0) avgLlen = 0;
-	else  avgLlen = totLlen / llen;
-	if (swidth == 0) avgSwid = 0;
-	else avgSwid = totSwid / swidth;
-	if (mwidth == 0) avgMwid = 0;
-	else avgMwid = totMwid / mwidth;
-	if (lwidth == 0) avgLwid = 0;
-	else avgLwid = totLwid / lwidth;
-	if ((swidth + mwidth + lwidth) == 0) avgoverallwdth = 0;
-	else avgoverallwdth = (totSwid + totMwid + totLwid) / (swidth + mwidth + lwidth);
-	if ((slen + mlen + llen) == 0)avgoverallen = 0;
-	else avgoverallen = (totSlen + totMlen + totLlen) / (slen + mlen + llen);
-	arounddendrite(imgtofun, minRect, myfile, swidth, mwidth, lwidth);
-	//myfile << "," << "DENDRITE" << "," << "Total No of Dendrites" << "," << "No.of Small width Dendrites" << "," << " No.of med width Dendrites" << "," << "No.of large width Dendrites" << "," << "No.of Small length Dendrites" << "," << "No.of Med length Dendrites" << "," << "No.of Large length Dendrites" << "," << "Avg len of all Dendrites" << "," << "Avg len of small length Dendrites" << "," << "Avg len of med length Dendrites" << "," << "Avg len of large length Dendrites" << "," << "Avg wdth of all Dendrites" << "," << "Avg wdth of small width Dendrites" << "," << "Avg wdth of med width Dendrites" << "," << "Avg wdth of large width Dendrites" << ",";
-	myfile << "," << "DENDRITE" << "," << swidth + mwidth + lwidth << "," << swidth << "," << mwidth << "," << lwidth << "," << slen << "," << mlen << "," << llen << "," << avgoverallen << "," << avgSlen << "," << avgMlen << "," << avgLlen << "," << avgoverallwdth << "," << avgSwid << "," << avgMwid << "," << avgLwid << ",";
-}*/
 
 void dendritedetect(vector<vector<Point>> hcontours, ofstream & myfile)
 {
